@@ -10,6 +10,7 @@ import 'dart:convert';
 
 import 'package:project_udemy_app/auth/signin_page.dart';
 import 'package:project_udemy_app/global.dart';
+import 'package:project_udemy_app/pages/select_destination_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MapPage extends StatefulWidget {
+
   const MapPage({super.key});
 
   @override
@@ -380,7 +382,9 @@ class _MapPageState extends State<MapPage> {
                           ),
                           const SizedBox(height: 16.0,),
                           ElevatedButton(
-                            onPressed: (){},
+                            onPressed: (){
+                              Navigator.push(context, MaterialPageRoute(builder: (c)=> SelectDestinationPage(addressFrom: addressFrom)));
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                             ),
