@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
@@ -5,6 +7,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart' as LocationPackage;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:project_udemy_app/auth/signin_page.dart';
+import 'package:project_udemy_app/global.dart';
 
 void main() {
   runApp(const MyApp());
@@ -38,12 +43,35 @@ class _MapPageState extends State<MapPage> {
   final String orsApiKey =
       '5b3ce3597851110001cf6248109f3dc55d6a457eb1712471bbe4b284';
   double searchContainerHeight = 220;
+  GlobalKey<ScaffoldState> sKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
   }
+
+  getUserInfoAndCheckBlockStatus() async{
+    DatabaseReference reference = FirebaseDatabase.instance.ref().child("users").child(FirebaseAuth.instance.currentUser!.uid);
+    await reference.once().then((dataSnap){
+      if(dataSnap.snapshot.value != null) {
+        if((dataSnap.snapshot.value as Map)["blockStatus"] == "no") {
+          setState(() {
+            userName = (dataSnap.snapshot.value as Map)["name"];
+            userPhone = (dataSnap.snapshot.value as Map)["phone"];
+
+          });
+        } else {
+          FirebaseAuth.instance.signOut();
+          Navigator.push(context, MaterialPageRoute(builder: (c)=> SigninPage()));
+          associateMethods.showSnackBarMsg("you are blocked contack admin", context);
+        }
+      } else {
+        FirebaseAuth.instance.signOut();
+      }
+    });
+  }
+
 
   Future<String> _getAddressFromLatLng(double latitude, double longitude) async {
     String address = "Address not found";
@@ -66,6 +94,7 @@ class _MapPageState extends State<MapPage> {
     try {
       var userLocation = await location.getLocation();
       addressFrom = await _getAddressFromLatLng(userLocation.latitude!, userLocation.longitude!);
+      await getUserInfoAndCheckBlockStatus();
       setState(() {
         currentLocation = userLocation;
         markers.add(
@@ -139,6 +168,78 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: sKey,
+      drawer: SizedBox(
+        width: 256,
+        child: Container(
+          color: Colors.grey,
+          child: ListView(
+            children: [
+              SizedBox(
+                height: 160,
+                child: DrawerHeader(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        "assets/avatar.webp",
+                        width: 60,
+                        height: 60,
+                      ),
+                      const SizedBox(width: 16),
+                       Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            userName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold
+                            )
+                          ),
+                          SizedBox(height: 4),
+                          const Text(
+                            "profile",
+                            style: TextStyle(
+                              color: Colors.grey,
+                            )
+                          )
+                        ],
+                      )
+                    ],
+                  )
+                )
+              ),
+              GestureDetector(
+                onTap: (){},
+                child: const ListTile(
+                  leading: Icon(Icons.history, color: Colors.black),
+                  title: Text("History", style: TextStyle(color: Colors.black),),
+                )
+              ),
+              GestureDetector(
+                  onTap: (){},
+                  child: const ListTile(
+                    leading: Icon(Icons.info, color: Colors.black),
+                    title: Text("About", style: TextStyle(color: Colors.black),),
+                  )
+              ),
+              GestureDetector(
+                  onTap: (){
+                    FirebaseAuth.instance.signOut();
+                    Navigator.push(context, MaterialPageRoute(builder: (c)=> SigninPage()));
+                  },
+                  child: const ListTile(
+                    leading: Icon(Icons.logout, color: Colors.black),
+                    title: Text("Logout", style: TextStyle(color: Colors.black),),
+                  )
+              ),
+            ],
+          )
+        )
+      ),
       appBar: AppBar(
         title: const Text('Map'),
       ),
@@ -217,10 +318,11 @@ class _MapPageState extends State<MapPage> {
               ],
             ),
           ),
+          
           Positioned(
               bottom: 0,
-              left: 0,
               right: 0,
+              left: 0,
               child: AnimatedSize(
                   curve: Curves.easeInOut,
                   duration: const Duration(milliseconds: 122),
